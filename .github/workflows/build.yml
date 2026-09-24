@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -18,7 +18,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android Project
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Project Structure
         run: |
           mkdir -p app/src/main/java/com/alrwishan/masarnusuk
           mkdir -p app/src/main/res/drawable
@@ -235,13 +238,11 @@ jobs:
                               webView.evaluateJavascript(forceDesktopJs, null);
                           }
 
-                          // محرك منع الخروج التلقائي (Keep-Alive) والتعبئة الذكية
                           String keepAliveAndAutomationJs = 
                               "(function() {" +
                               "  if (window.__keepAliveInit) return;" +
                               "  window.__keepAliveInit = true;" +
 
-                              // 1. نبض مستمر لمحاكاة تفاعل طبيعي يمنع انتهاء الجلسة والخروج التلقائي
                               "  setInterval(function() {" +
                               "    try {" +
                               "      window.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 100, clientY: 100 }));" +
@@ -251,7 +252,6 @@ jobs:
                               "    } catch (e) {}" +
                               "  }, 15000);" +
 
-                              // 2. مراقبة التعديل اليدوي لمنع التكرار المزعج
                               "  function markEdited() { this.setAttribute('data-user-modified', 'true'); }" +
                               "  function attach(el) {" +
                               "    if (!el || el.getAttribute('data-bound')) return;" +
@@ -286,9 +286,7 @@ jobs:
                               "    }" +
                               "  }" +
 
-                              // 3. التعبئة التلقائية للبيانات المطلوبة
                               "  setInterval(function() {" +
-                              // تثبيت نوع الجواز عادي
                               "    document.querySelectorAll('input, select').forEach(function(el) {" +
                               "      attach(el);" +
                               "      var ph = el.getAttribute('placeholder') || '';" +
@@ -299,7 +297,6 @@ jobs:
                               "      }" +
                               "    });" +
 
-                              // الحالة الاجتماعية بحسب سنة الميلاد
                               "    var birthYear = 0;" +
                               "    document.querySelectorAll('input').forEach(function(inp) {" +
                               "      var label = (inp.closest('.form-group, .v-input, div') || {}).innerText || '';" +
@@ -319,7 +316,6 @@ jobs:
                               "      });" +
                               "    }" +
 
-                              // بيانات التواصل: البريد والجوال ورمز الدولة
                               "    document.querySelectorAll('input').forEach(function(input) {" +
                               "      attach(input);" +
                               "      var ph = input.getAttribute('placeholder') || '';" +
@@ -394,4 +390,54 @@ jobs:
               compileSdk 34
               defaultConfig {
                   applicationId "com.alrwishan.masarnusuk"
-    
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 11
+                  versionName "2.1"
+              }
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                  }
+              }
+          }
+          EOF
+
+          cat << 'EOF' > build.gradle
+          plugins {
+              id 'com.android.application' version '8.2.2' apply false
+          }
+          EOF
+
+          cat << 'EOF' > settings.gradle
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "nusuk-app"
+          include ':app'
+          EOF
+
+      - name: Install Gradle and Build APK
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.2-bin.zip
+          unzip -q gradle-8.2-bin.zip
+          export PATH=$PWD/gradle-8.2/bin:$PATH
+          gradle assembleDebug --no-daemon
+
+      - name: Upload Built APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nusuk-App-Final
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
