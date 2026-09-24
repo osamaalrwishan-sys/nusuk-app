@@ -18,13 +18,17 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Project and Build
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: "8.5"
+
+      - name: Setup Project
         run: |
           mkdir -p app/src/main/java/com/alrwishan/masarnusuk
           mkdir -p app/src/main/res/drawable
           mkdir -p app/src/main/res/values
 
-          # 1. إعداد settings.gradle في المجلد الرئيسي
           cat << 'EOF' > settings.gradle
           pluginManagement {
               repositories {
@@ -44,14 +48,12 @@ jobs:
           include ':app'
           EOF
 
-          # 2. إعداد build.gradle الرئيسي
           cat << 'EOF' > build.gradle
           plugins {
               id 'com.android.application' version '8.2.2' apply false
           }
           EOF
 
-          # 3. إعداد app/build.gradle
           cat << 'EOF' > app/build.gradle
           plugins {
               id 'com.android.application'
@@ -63,8 +65,8 @@ jobs:
                   applicationId "com.alrwishan.masarnusuk"
                   minSdk 24
                   targetSdk 34
-                  versionCode 16
-                  versionName "3.0"
+                  versionCode 17
+                  versionName "3.1"
               }
               buildTypes {
                   release {
@@ -74,7 +76,6 @@ jobs:
           }
           EOF
 
-          # 4. الأيقونة والمانيفست
           cat << 'EOF' > app/src/main/res/drawable/ic_nusuk.xml
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
               android:width="108dp" android:height="108dp"
@@ -113,7 +114,6 @@ jobs:
           </manifest>
           EOF
 
-          # 5. كود الجافا الشامل والمحصن
           cat << 'EOF' > app/src/main/java/com/alrwishan/masarnusuk/MainActivity.java
           package com.alrwishan.masarnusuk;
 
@@ -364,10 +364,8 @@ jobs:
           }
           EOF
 
-      - name: Setup and Build APK
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          arguments: assembleDebug
+      - name: Build APK
+        run: gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
