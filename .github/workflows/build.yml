@@ -18,14 +18,356 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Run Setup Script
-        run: bash setup.sh
+      - name: Setup Project and Build
+        run: |
+          mkdir -p app/src/main/java/com/alrwishan/masarnusuk
+          mkdir -p app/src/main/res/drawable
+          mkdir -p app/src/main/res/values
 
-      - name: Setup Gradle
+          # 1. إعداد settings.gradle في المجلد الرئيسي
+          cat << 'EOF' > settings.gradle
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "nusuk-app"
+          include ':app'
+          EOF
+
+          # 2. إعداد build.gradle الرئيسي
+          cat << 'EOF' > build.gradle
+          plugins {
+              id 'com.android.application' version '8.2.2' apply false
+          }
+          EOF
+
+          # 3. إعداد app/build.gradle
+          cat << 'EOF' > app/build.gradle
+          plugins {
+              id 'com.android.application'
+          }
+          android {
+              namespace 'com.alrwishan.masarnusuk'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.alrwishan.masarnusuk"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 16
+                  versionName "3.0"
+              }
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                  }
+              }
+          }
+          EOF
+
+          # 4. الأيقونة والمانيفست
+          cat << 'EOF' > app/src/main/res/drawable/ic_nusuk.xml
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp" android:height="108dp"
+              android:viewportWidth="108" android:viewportHeight="108">
+              <path android:fillColor="#876B41" android:pathData="M0,0h108v108h-108z"/>
+              <path android:fillColor="#F4E8D1" android:pathData="M54,22L28,37L54,52L80,37Z"/>
+              <path android:fillColor="#D8BE8A" android:pathData="M28,40L54,55L54,82L28,67Z"/>
+              <path android:fillColor="#BFA067" android:pathData="M54,55L80,40L80,67L54,82Z"/>
+          </vector>
+          EOF
+
+          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+              <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+              <application
+                  android:allowBackup="true"
+                  android:icon="@drawable/ic_nusuk"
+                  android:roundIcon="@drawable/ic_nusuk"
+                  android:label="مسار نسك"
+                  android:theme="@android:style/Theme.NoTitleBar"
+                  android:usesCleartextTraffic="true">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:configChanges="orientation|screenSize|keyboardHidden">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          # 5. كود الجافا الشامل والمحصن
+          cat << 'EOF' > app/src/main/java/com/alrwishan/masarnusuk/MainActivity.java
+          package com.alrwishan.masarnusuk;
+
+          import android.annotation.SuppressLint;
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.graphics.Color;
+          import android.graphics.drawable.GradientDrawable;
+          import android.net.Uri;
+          import android.os.Bundle;
+          import android.view.Gravity;
+          import android.view.View;
+          import android.view.ViewGroup;
+          import android.webkit.CookieManager;
+          import android.webkit.ValueCallback;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import android.widget.Button;
+          import android.widget.LinearLayout;
+          import android.widget.RelativeLayout;
+
+          public class MainActivity extends Activity {
+              private WebView webView;
+              private boolean isDesktop = true;
+              private ValueCallback<Uri[]> filePathCallback;
+              private final static int FILECHOOSER_RESULTCODE = 1001;
+
+              private final String DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
+              private final String MOBILE_UA = "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36";
+
+              @SuppressLint("SetJavaScriptEnabled")
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  RelativeLayout root = new RelativeLayout(this);
+                  root.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                  root.setBackgroundColor(Color.parseColor("#F9F7F2"));
+
+                  LinearLayout bar = new LinearLayout(this);
+                  bar.setId(View.generateViewId());
+                  bar.setOrientation(LinearLayout.HORIZONTAL);
+                  bar.setBackgroundColor(Color.parseColor("#876B41"));
+                  bar.setGravity(Gravity.CENTER_VERTICAL);
+                  bar.setPadding(14, 10, 14, 10);
+
+                  RelativeLayout.LayoutParams barParams = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+                  barParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+                  bar.setLayoutParams(barParams);
+
+                  Button btnToggle = createNusukBtn("💻 وضع الكمبيوتر");
+                  Button btnRefresh = createNusukBtn("🔄 تحديث");
+                  bar.addView(btnToggle);
+                  bar.addView(btnRefresh);
+
+                  webView = new WebView(this);
+                  webView.setBackgroundColor(Color.parseColor("#F9F7F2"));
+                  RelativeLayout.LayoutParams webParams = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT);
+                  webParams.addRule(RelativeLayout.BELOW, bar.getId());
+                  webView.setLayoutParams(webParams);
+
+                  root.addView(bar);
+                  root.addView(webView);
+                  setContentView(root);
+
+                  setupSettings();
+
+                  btnToggle.setOnClickListener(v -> {
+                      isDesktop = !isDesktop;
+                      btnToggle.setText(isDesktop ? "💻 وضع الكمبيوتر" : "📱 وضع الجوال");
+                      applyMode();
+                      webView.reload();
+                  });
+
+                  btnRefresh.setOnClickListener(v -> webView.reload());
+                  applyMode();
+                  webView.loadUrl("https://masar.nusuk.sa");
+              }
+
+              private Button createNusukBtn(String title) {
+                  Button b = new Button(this);
+                  b.setText(title);
+                  b.setTextColor(Color.parseColor("#FFFFFF"));
+                  b.setTextSize(13);
+                  GradientDrawable shape = new GradientDrawable();
+                  shape.setShape(GradientDrawable.RECTANGLE);
+                  shape.setColor(Color.parseColor("#6D5431"));
+                  shape.setCornerRadius(10);
+                  b.setBackground(shape);
+                  LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+                  lp.setMargins(6, 0, 6, 0);
+                  b.setLayoutParams(lp);
+                  return b;
+              }
+
+              private void setupSettings() {
+                  WebSettings s = webView.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true);
+                  s.setDatabaseEnabled(true);
+                  s.setAllowFileAccess(true);
+                  s.setAllowContentAccess(true);
+                  s.setSupportZoom(true);
+                  s.setBuiltInZoomControls(true);
+                  s.setDisplayZoomControls(false);
+
+                  CookieManager cm = CookieManager.getInstance();
+                  cm.setAcceptCookie(true);
+                  cm.setAcceptThirdPartyCookies(webView, true);
+
+                  webView.setWebChromeClient(new WebChromeClient() {
+                      @Override
+                      public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
+                          if (MainActivity.this.filePathCallback != null) MainActivity.this.filePathCallback.onReceiveValue(null);
+                          MainActivity.this.filePathCallback = filePathCallback;
+                          Intent intent = fileChooserParams.createIntent();
+                          try {
+                              startActivityForResult(intent, FILECHOOSER_RESULTCODE);
+                          } catch (Exception e) {
+                              MainActivity.this.filePathCallback = null;
+                              return false;
+                          }
+                          return true;
+                      }
+                  });
+
+                  webView.setWebViewClient(new WebViewClient() {
+                      @Override
+                      public void onPageFinished(WebView view, String url) {
+                          super.onPageFinished(view, url);
+                          CookieManager.getInstance().flush();
+                          if (isDesktop) {
+                              String forceDesktopJs = 
+                                  "var meta = document.querySelector('meta[name=viewport]');" +
+                                  "if (meta) { meta.setAttribute('content', 'width=1280, initial-scale=0.75'); } else {" +
+                                  "  meta = document.createElement('meta'); meta.name = 'viewport'; meta.content = 'width=1280, initial-scale=0.75';" +
+                                  "  document.getElementsByTagName('head')[0].appendChild(meta);" +
+                                  "}";
+                              webView.evaluateJavascript(forceDesktopJs, null);
+                          }
+
+                          String script = 
+                              "(function() {" +
+                              "  if (window.__keepAliveInit) return;" +
+                              "  window.__keepAliveInit = true;" +
+                              "  setInterval(function() {" +
+                              "    try {" +
+                              "      window.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 100, clientY: 100 }));" +
+                              "      window.dispatchEvent(new Event('scroll', { bubbles: true }));" +
+                              "      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift' }));" +
+                              "      document.dispatchEvent(new Event('visibilitychange'));" +
+                              "    } catch (e) {}" +
+                              "  }, 15000);" +
+                              "  function markEdited() { this.setAttribute('data-user-modified', 'true'); }" +
+                              "  function attach(el) {" +
+                              "    if (!el || el.getAttribute('data-bound')) return;" +
+                              "    el.addEventListener('input', markEdited); el.addEventListener('change', markEdited); el.addEventListener('keydown', markEdited);" +
+                              "    el.setAttribute('data-bound', 'true');" +
+                              "  }" +
+                              "  function trigger(el) {" +
+                              "    if (!el) return;" +
+                              "    el.dispatchEvent(new Event('input', {bubbles: true})); el.dispatchEvent(new Event('change', {bubbles: true})); el.dispatchEvent(new Event('blur', {bubbles: true}));" +
+                              "  }" +
+                              "  function fill(el, val) {" +
+                              "    if (!el) return; attach(el); if (el.getAttribute('data-user-modified') === 'true' || el.value === val) return;" +
+                              "    el.value = val; trigger(el);" +
+                              "  }" +
+                              "  function selectText(sel, text) {" +
+                              "    if (!sel) return; attach(sel); if (sel.getAttribute('data-user-modified') === 'true') return;" +
+                              "    for (var i = 0; i < sel.options.length; i++) {" +
+                              "      if (sel.options[i].text.indexOf(text) !== -1) {" +
+                              "        if (sel.selectedIndex !== i) { sel.selectedIndex = i; trigger(sel); } break;" +
+                              "      }" +
+                              "    }" +
+                              "  }" +
+                              "  setInterval(function() {" +
+                              "    document.querySelectorAll('input, select').forEach(function(el) {" +
+                              "      attach(el);" +
+                              "      var ph = el.getAttribute('placeholder') || '';" +
+                              "      var label = (el.closest('.form-group, .v-input, div') || {}).innerText || '';" +
+                              "      if (label.indexOf('نوع الجواز') !== -1 || ph.indexOf('نوع الجواز') !== -1) {" +
+                              "        if (el.tagName === 'SELECT') selectText(el, 'عادي'); else if (!el.value) fill(el, 'عادي');" +
+                              "      }" +
+                              "    });" +
+                              "    var birthYear = 0;" +
+                              "    document.querySelectorAll('input').forEach(function(inp) {" +
+                              "      var label = (inp.closest('.form-group, .v-input, div') || {}).innerText || '';" +
+                              "      if (label.indexOf('تاريخ الميلاد') !== -1) {" +
+                              "        var val = inp.value || ''; var m = val.match(/(19\\d\\d|20\\d\\d)/);" +
+                              "        if (m) birthYear = parseInt(m[1]);" +
+                              "      }" +
+                              "    });" +
+                              "    if (birthYear > 0) {" +
+                              "      var targetStatus = (birthYear < 2000) ? 'متزوج' : 'أعزب';" +
+                              "      document.querySelectorAll('select').forEach(function(el) {" +
+                              "        var label = (el.closest('.form-group, .v-input, div') || {}).innerText || '';" +
+                              "        if (label.indexOf('الحالة الاجتماعية') !== -1) selectText(el, targetStatus);" +
+                              "      });" +
+                              "    }" +
+                              "    document.querySelectorAll('input').forEach(function(input) {" +
+                              "      attach(input);" +
+                              "      var ph = input.getAttribute('placeholder') || '';" +
+                              "      if (ph.indexOf('البريد') !== -1) fill(input, 'osamaalrwishan@gmail.com');" +
+                              "      if (ph.indexOf('الجوال') !== -1 || ph.indexOf('الهاتف') !== -1) fill(input, '775001721');" +
+                              "      if (input.value === '966' || input.value === '+966') fill(input, '967');" +
+                              "    });" +
+                              "    document.querySelectorAll('select').forEach(function(sel) {" +
+                              "      var label = (sel.closest('div') || {}).innerText || '';" +
+                              "      if (label.indexOf('966') !== -1 || label.indexOf('رمز الدولة') !== -1) selectText(sel, '967');" +
+                              "    });" +
+                              "  }, 1200);" +
+                              "})();";
+                          webView.evaluateJavascript(script, null);
+                      }
+                  });
+              }
+
+              @Override
+              protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+                  if (requestCode == FILECHOOSER_RESULTCODE) {
+                      if (filePathCallback == null) return;
+                      filePathCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
+                      filePathCallback = null;
+                  } else super.onActivityResult(requestCode, resultCode, data);
+              }
+
+              private void applyMode() {
+                  WebSettings s = webView.getSettings();
+                  if (isDesktop) {
+                      s.setUserAgentString(DESKTOP_UA);
+                      s.setUseWideViewPort(true);
+                      s.setLoadWithOverviewMode(true);
+                      webView.setInitialScale(75);
+                  } else {
+                      s.setUserAgentString(MOBILE_UA);
+                      s.setUseWideViewPort(false);
+                      s.setLoadWithOverviewMode(false);
+                      webView.setInitialScale(0);
+                  }
+              }
+
+              @Override
+              public void onBackPressed() {
+                  if (webView.canGoBack()) webView.goBack();
+                  else super.onBackPressed();
+              }
+          }
+          EOF
+
+      - name: Setup and Build APK
         uses: gradle/actions/setup-gradle@v3
-
-      - name: Build APK
-        run: gradle assembleDebug
+        with:
+          arguments: assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
