@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -18,11 +18,19 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-
-      - name: Generate Code and Build
+      - name: Prepare Project
         run: |
-          curl -sL "https://gist.githubusercontent.com/script-host/raw/nusuk_generator.sh" -o build_project.sh || true
-          bash -c "$(curl -fsSL https://raw.githubusercontent.com/osamaalrwishan-sys/nusuk-app/main/setup.sh 2>/dev/null || echo 'echo ok')"
+          chmod +x setup.sh
+          ./setup.sh
+
+      - name: Build APK with Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          arguments: assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nusuk-App-Live
+          path: app/build/outputs/apk/debug/*.apk
           
