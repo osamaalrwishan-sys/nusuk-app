@@ -21,6 +21,7 @@ jobs:
       - name: Generate Android Project
         run: |
           mkdir -p app/src/main/java/com/alrwishan/masarnusuk
+          mkdir -p app/src/main/res/layout
           mkdir -p app/src/main/res/values
 
           cat << 'EOF' > app/src/main/AndroidManifest.xml
@@ -36,7 +37,7 @@ jobs:
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
-                      android:configChanges="orientation|screenSize">
+                      android:configChanges="orientation|screenSize|keyboardHidden">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -49,34 +50,110 @@ jobs:
           cat << 'EOF' > app/src/main/java/com/alrwishan/masarnusuk/MainActivity.java
           package com.alrwishan.masarnusuk;
 
+          import android.annotation.SuppressLint;
           import android.app.Activity;
+          import android.graphics.Color;
           import android.os.Bundle;
+          import android.view.Gravity;
+          import android.view.View;
+          import android.view.ViewGroup;
           import android.webkit.CookieManager;
           import android.webkit.WebSettings;
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
+          import android.widget.Button;
+          import android.widget.LinearLayout;
+          import android.widget.RelativeLayout;
 
           public class MainActivity extends Activity {
               private WebView webView;
+              private boolean isDesktop = true;
 
+              private final String DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
+              private final String MOBILE_UA = "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36";
+
+              @SuppressLint("SetJavaScriptEnabled")
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
-                  webView = new WebView(this);
-                  setContentView(webView);
 
+                  RelativeLayout root = new RelativeLayout(this);
+                  root.setLayoutParams(new ViewGroup.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+                  // إنشاء شريط أدوات التحكم العلوي
+                  LinearLayout bar = new LinearLayout(this);
+                  bar.setId(View.generateViewId());
+                  bar.setOrientation(LinearLayout.HORIZONTAL);
+                  bar.setBackgroundColor(Color.parseColor("#1B2A47"));
+                  bar.setGravity(Gravity.CENTER_VERTICAL);
+                  bar.setPadding(8, 6, 8, 6);
+
+                  RelativeLayout.LayoutParams barParams = new RelativeLayout.LayoutParams(
+                          RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+                  barParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+                  bar.setLayoutParams(barParams);
+
+                  Button btnToggle = createBtn("💻 كمبيوتر");
+                  Button btnZoomIn = createBtn("➕");
+                  Button btnZoomOut = createBtn("➖");
+                  Button btnRefresh = createBtn("🔄");
+
+                  bar.addView(btnToggle);
+                  bar.addView(btnZoomIn);
+                  bar.addView(btnZoomOut);
+                  bar.addView(btnRefresh);
+
+                  // إعداد المتصفح
+                  webView = new WebView(this);
+                  RelativeLayout.LayoutParams webParams = new RelativeLayout.LayoutParams(
+                          RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT);
+                  webParams.addRule(RelativeLayout.BELOW, bar.getId());
+                  webView.setLayoutParams(webParams);
+
+                  root.addView(bar);
+                  root.addView(webView);
+                  setContentView(root);
+
+                  setupSettings();
+
+                  btnToggle.setOnClickListener(v -> {
+                      isDesktop = !isDesktop;
+                      btnToggle.setText(isDesktop ? "💻 كمبيوتر" : "📱 جوال");
+                      applyMode();
+                      webView.reload();
+                  });
+
+                  btnZoomIn.setOnClickListener(v -> webView.zoomIn());
+                  btnZoomOut.setOnClickListener(v -> webView.zoomOut());
+                  btnRefresh.setOnClickListener(v -> webView.reload());
+
+                  applyMode();
+                  webView.loadUrl("https://masar.nusuk.sa");
+              }
+
+              private Button createBtn(String title) {
+                  Button b = new Button(this);
+                  b.setText(title);
+                  b.setTextColor(Color.WHITE);
+                  b.setTextSize(12);
+                  b.setBackgroundColor(Color.parseColor("#283E68"));
+                  LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+                  lp.setMargins(4, 0, 4, 0);
+                  b.setLayoutParams(lp);
+                  return b;
+              }
+
+              private void setupSettings() {
                   WebSettings s = webView.getSettings();
                   s.setJavaScriptEnabled(true);
                   s.setDomStorageEnabled(true);
                   s.setDatabaseEnabled(true);
+                  s.setBuiltInZoomControls(true);
+                  s.setDisplayZoomControls(true); // إظهار أزرار التكبير على الشاشة
+                  s.setSupportZoom(true);
                   s.setUseWideViewPort(true);
                   s.setLoadWithOverviewMode(true);
-                  s.setSupportZoom(true);
-                  s.setBuiltInZoomControls(true);
-                  s.setDisplayZoomControls(false);
-
-                  // ضبط هوية المتصفح ككمبيوتر يعمل بنظام ويندوز وكروم مكتبي
-                  s.setUserAgentString("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36");
 
                   CookieManager cm = CookieManager.getInstance();
                   cm.setAcceptCookie(true);
@@ -86,38 +163,66 @@ jobs:
                       @Override
                       public void onPageFinished(WebView view, String url) {
                           super.onPageFinished(view, url);
-                          String js = "(function() {" +
-                              "setInterval(function() {" +
-                              "  document.querySelectorAll('input').forEach(function(input) {" +
-                              "    var ph = input.getAttribute('placeholder') || '';" +
-                              "    var aria = input.getAttribute('aria-label') || '';" +
-                              "    if (ph.indexOf('البريد') !== -1 || aria.indexOf('البريد') !== -1) {" +
-                              "      if (input.value !== 'osamaalrwishan@gmail.com') {" +
-                              "        input.value = 'osamaalrwishan@gmail.com';" +
+                          if (isDesktop) {
+                              // إزالة وسم الـ Viewport الذي يفرض عرض الجوال
+                              String forceDesktopJs = 
+                                  "var meta = document.querySelector('meta[name=viewport]');" +
+                                  "if (meta) { meta.setAttribute('content', 'width=1280, initial-scale=0.75'); } else {" +
+                                  "  meta = document.createElement('meta');" +
+                                  "  meta.name = 'viewport';" +
+                                  "  meta.content = 'width=1280, initial-scale=0.75';" +
+                                  "  document.getElementsByTagName('head')[0].appendChild(meta);" +
+                                  "}";
+                              webView.evaluateJavascript(forceDesktopJs, null);
+                          }
+
+                          // كود التعبئة التلقائية للبيانات المتكررة
+                          String autoFillJs = 
+                              "(function() {" +
+                              "  setInterval(function() {" +
+                              "    document.querySelectorAll('input').forEach(function(input) {" +
+                              "      var ph = input.getAttribute('placeholder') || '';" +
+                              "      var aria = input.getAttribute('aria-label') || '';" +
+                              "      if (ph.indexOf('البريد') !== -1 || aria.indexOf('البريد') !== -1) {" +
+                              "        if (input.value !== 'osamaalrwishan@gmail.com') {" +
+                              "          input.value = 'osamaalrwishan@gmail.com';" +
+                              "          input.dispatchEvent(new Event('input', {bubbles: true}));" +
+                              "          input.dispatchEvent(new Event('change', {bubbles: true}));" +
+                              "        }" +
+                              "      }" +
+                              "      if (ph.indexOf('الجوال') !== -1 || ph.indexOf('الهاتف') !== -1 || aria.indexOf('الجوال') !== -1) {" +
+                              "        if (input.value !== '775001721') {" +
+                              "          input.value = '775001721';" +
+                              "          input.dispatchEvent(new Event('input', {bubbles: true}));" +
+                              "          input.dispatchEvent(new Event('change', {bubbles: true}));" +
+                              "        }" +
+                              "      }" +
+                              "      if (input.value === '966' || input.value === '+966') {" +
+                              "        input.value = '967';" +
                               "        input.dispatchEvent(new Event('input', {bubbles: true}));" +
                               "        input.dispatchEvent(new Event('change', {bubbles: true}));" +
                               "      }" +
-                              "    }" +
-                              "    if (ph.indexOf('الجوال') !== -1 || ph.indexOf('الهاتف') !== -1 || aria.indexOf('الجوال') !== -1) {" +
-                              "      if (input.value !== '775001721') {" +
-                              "        input.value = '775001721';" +
-                              "        input.dispatchEvent(new Event('input', {bubbles: true}));" +
-                              "        input.dispatchEvent(new Event('change', {bubbles: true}));" +
-                              "      }" +
-                              "    }" +
-                              "    if (input.value === '966' || input.value === '+966') {" +
-                              "      input.value = '967';" +
-                              "      input.dispatchEvent(new Event('input', {bubbles: true}));" +
-                              "      input.dispatchEvent(new Event('change', {bubbles: true}));" +
-                              "    }" +
-                              "  });" +
-                              "}, 1500);" +
+                              "    });" +
+                              "  }, 1500);" +
                               "})();";
-                          webView.evaluateJavascript(js, null);
+                          webView.evaluateJavascript(autoFillJs, null);
                       }
                   });
+              }
 
-                  webView.loadUrl("https://masar.nusuk.sa");
+              private void applyMode() {
+                  WebSettings s = webView.getSettings();
+                  if (isDesktop) {
+                      s.setUserAgentString(DESKTOP_UA);
+                      s.setUseWideViewPort(true);
+                      s.setLoadWithOverviewMode(true);
+                      webView.setInitialScale(75); // نسبة العرض المريحة للكمبيوتر
+                  } else {
+                      s.setUserAgentString(MOBILE_UA);
+                      s.setUseWideViewPort(false);
+                      s.setLoadWithOverviewMode(false);
+                      webView.setInitialScale(0);
+                  }
               }
 
               @Override
@@ -142,8 +247,8 @@ jobs:
                   applicationId "com.alrwishan.masarnusuk"
                   minSdk 24
                   targetSdk 34
-                  versionCode 2
-                  versionName "1.1"
+                  versionCode 3
+                  versionName "1.2"
               }
               buildTypes {
                   release {
@@ -187,6 +292,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Nusuk-App-Desktop
+          name: Nusuk-App-Browser
           path: app/build/outputs/apk/debug/*.apk
           
