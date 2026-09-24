@@ -270,7 +270,7 @@ jobs:
                               "  }" +
 
                               "  setInterval(function() {" +
-                              // 1. نوع الجواز: عادي
+                              // 1. نوع الجواز عادي
                               "    document.querySelectorAll('input, select').forEach(function(el) {" +
                               "      attach(el);" +
                               "      var ph = el.getAttribute('placeholder') || '';" +
@@ -281,7 +281,7 @@ jobs:
                               "      }" +
                               "    });" +
 
-                              // 2. الحالة الاجتماعية بحسب سنة الميلاد
+                              // 2. الحالة الاجتماعية بحسب تاريخ الميلاد
                               "    var birthYear = 0;" +
                               "    document.querySelectorAll('input').forEach(function(inp) {" +
                               "      var label = (inp.closest('.form-group, .v-input, div') || {}).innerText || '';" +
@@ -301,7 +301,7 @@ jobs:
                               "      });" +
                               "    }" +
 
-                              // 3. التواصل: البريد ورقم الجوال ورمز الدولة
+                              // 3. التواصل: البريد والجوال ورمز الدولة
                               "    document.querySelectorAll('input').forEach(function(input) {" +
                               "      attach(input);" +
                               "      var ph = input.getAttribute('placeholder') || '';" +
@@ -378,8 +378,8 @@ jobs:
                   applicationId "com.alrwishan.masarnusuk"
                   minSdk 24
                   targetSdk 34
-                  versionCode 8
-                  versionName "1.7"
+                  versionCode 9
+                  versionName "1.8"
               }
               buildTypes {
                   release {
@@ -414,11 +414,14 @@ jobs:
           include ':app'
           EOF
 
-      - name: Build with Gradle Wrapper
-        run: |
-          gradle wrapper
-          chmod +x ./gradlew
-          ./gradlew assembleDebug --stacktrace
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Build APK
+        run: gradle assembleDebug
 
       - name: Upload APK
-        uses: actions/
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nusuk-App-Official
+          path: app/build/outputs/apk/debug/*.apk
