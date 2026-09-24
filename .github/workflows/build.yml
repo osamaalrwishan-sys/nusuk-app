@@ -221,6 +221,8 @@ jobs:
                       @Override
                       public void onPageFinished(WebView view, String url) {
                           super.onPageFinished(view, url);
+                          CookieManager.getInstance().flush();
+
                           if (isDesktop) {
                               String forceDesktopJs = 
                                   "var meta = document.querySelector('meta[name=viewport]');" +
@@ -233,8 +235,23 @@ jobs:
                               webView.evaluateJavascript(forceDesktopJs, null);
                           }
 
-                          String automationEngineJs = 
+                          // محرك منع الخروج التلقائي (Keep-Alive) والتعبئة الذكية
+                          String keepAliveAndAutomationJs = 
                               "(function() {" +
+                              "  if (window.__keepAliveInit) return;" +
+                              "  window.__keepAliveInit = true;" +
+
+                              // 1. نبض مستمر لمحاكاة تفاعل طبيعي يمنع انتهاء الجلسة والخروج التلقائي
+                              "  setInterval(function() {" +
+                              "    try {" +
+                              "      window.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 100, clientY: 100 }));" +
+                              "      window.dispatchEvent(new Event('scroll', { bubbles: true }));" +
+                              "      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift' }));" +
+                              "      document.dispatchEvent(new Event('visibilitychange'));" +
+                              "    } catch (e) {}" +
+                              "  }, 15000);" +
+
+                              // 2. مراقبة التعديل اليدوي لمنع التكرار المزعج
                               "  function markEdited() { this.setAttribute('data-user-modified', 'true'); }" +
                               "  function attach(el) {" +
                               "    if (!el || el.getAttribute('data-bound')) return;" +
@@ -269,8 +286,9 @@ jobs:
                               "    }" +
                               "  }" +
 
+                              // 3. التعبئة التلقائية للبيانات المطلوبة
                               "  setInterval(function() {" +
-                              // 1. نوع الجواز عادي
+                              // تثبيت نوع الجواز عادي
                               "    document.querySelectorAll('input, select').forEach(function(el) {" +
                               "      attach(el);" +
                               "      var ph = el.getAttribute('placeholder') || '';" +
@@ -281,7 +299,7 @@ jobs:
                               "      }" +
                               "    });" +
 
-                              // 2. الحالة الاجتماعية بحسب تاريخ الميلاد
+                              // الحالة الاجتماعية بحسب سنة الميلاد
                               "    var birthYear = 0;" +
                               "    document.querySelectorAll('input').forEach(function(inp) {" +
                               "      var label = (inp.closest('.form-group, .v-input, div') || {}).innerText || '';" +
@@ -301,7 +319,7 @@ jobs:
                               "      });" +
                               "    }" +
 
-                              // 3. التواصل: البريد والجوال ورمز الدولة
+                              // بيانات التواصل: البريد والجوال ورمز الدولة
                               "    document.querySelectorAll('input').forEach(function(input) {" +
                               "      attach(input);" +
                               "      var ph = input.getAttribute('placeholder') || '';" +
@@ -325,7 +343,7 @@ jobs:
                               "  }, 1200);" +
                               "})();";
 
-                          webView.evaluateJavascript(automationEngineJs, null);
+                          webView.evaluateJavascript(keepAliveAndAutomationJs, null);
                       }
                   });
               }
@@ -376,52 +394,4 @@ jobs:
               compileSdk 34
               defaultConfig {
                   applicationId "com.alrwishan.masarnusuk"
-                  minSdk 24
-                  targetSdk 34
-                  versionCode 9
-                  versionName "1.8"
-              }
-              buildTypes {
-                  release {
-                      minifyEnabled false
-                  }
-              }
-          }
-          EOF
-
-          cat << 'EOF' > build.gradle
-          plugins {
-              id 'com.android.application' version '8.2.2' apply false
-          }
-          EOF
-
-          cat << 'EOF' > settings.gradle
-          pluginManagement {
-              repositories {
-                  google()
-                  mavenCentral()
-                  gradlePluginPortal()
-              }
-          }
-          dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          rootProject.name = "nusuk-app"
-          include ':app'
-          EOF
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-
-      - name: Build APK
-        run: gradle assembleDebug
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Nusuk-App-Official
-          path: app/build/outputs/apk/debug/*.apk
+    
