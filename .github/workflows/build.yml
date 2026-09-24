@@ -18,10 +18,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Setup Project Structure
+      - name: Generate Android Project
         run: |
           mkdir -p app/src/main/java/com/alrwishan/masarnusuk
           mkdir -p app/src/main/res/drawable
@@ -238,7 +235,7 @@ jobs:
                               webView.evaluateJavascript(forceDesktopJs, null);
                           }
 
-                          String keepAliveAndAutomationJs = 
+                          String script = 
                               "(function() {" +
                               "  if (window.__keepAliveInit) return;" +
                               "  window.__keepAliveInit = true;" +
@@ -339,7 +336,7 @@ jobs:
                               "  }, 1200);" +
                               "})();";
 
-                          webView.evaluateJavascript(keepAliveAndAutomationJs, null);
+                          webView.evaluateJavascript(script, null);
                       }
                   });
               }
@@ -392,8 +389,8 @@ jobs:
                   applicationId "com.alrwishan.masarnusuk"
                   minSdk 24
                   targetSdk 34
-                  versionCode 11
-                  versionName "2.1"
+                  versionCode 12
+                  versionName "2.2"
               }
               buildTypes {
                   release {
@@ -428,16 +425,13 @@ jobs:
           include ':app'
           EOF
 
-      - name: Install Gradle and Build APK
-        run: |
-          wget -q https://services.gradle.org/distributions/gradle-8.2-bin.zip
-          unzip -q gradle-8.2-bin.zip
-          export PATH=$PWD/gradle-8.2/bin:$PATH
-          gradle assembleDebug --no-daemon
+      - name: Build with Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          arguments: assembleDebug
 
-      - name: Upload Built APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Nusuk-App-Final
+          name: Nusuk-App-Live
           path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
