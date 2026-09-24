@@ -18,13 +18,13 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Generate Android Project
+      - name: Setup Android Project
         run: |
           mkdir -p app/src/main/java/com/alrwishan/masarnusuk
           mkdir -p app/src/main/res/drawable
           mkdir -p app/src/main/res/values
 
-          # أيقونة نسك الرسمية المتجهة
+          # أيقونة نسك الرسمية
           cat << 'EOF' > app/src/main/res/drawable/ic_nusuk.xml
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
               android:width="108dp"
@@ -120,7 +120,6 @@ jobs:
                           ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
                   root.setBackgroundColor(Color.parseColor("#F9F7F2"));
 
-                  // شريط التحكم العلوي
                   LinearLayout bar = new LinearLayout(this);
                   bar.setId(View.generateViewId());
                   bar.setOrientation(LinearLayout.HORIZONTAL);
@@ -199,7 +198,6 @@ jobs:
                   cm.setAcceptCookie(true);
                   cm.setAcceptThirdPartyCookies(webView, true);
 
-                  // دعم اختيار ورفع ملفات الجوازات
                   webView.setWebChromeClient(new WebChromeClient() {
                       @Override
                       public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
@@ -235,18 +233,15 @@ jobs:
                               webView.evaluateJavascript(forceDesktopJs, null);
                           }
 
-                          // محرك الأتمتة مع حماية التعديل اليدوي الكامل
                           String automationEngineJs = 
                               "(function() {" +
-                              "  function markUserEdited(e) {" +
-                              "    this.setAttribute('data-user-edited', 'true');" +
-                              "  }" +
-                              "  function attachListener(el) {" +
-                              "    if (!el || el.getAttribute('data-listener-attached')) return;" +
-                              "    el.addEventListener('input', markUserEdited);" +
-                              "    el.addEventListener('keydown', markUserEdited);" +
-                              "    el.addEventListener('change', markUserEdited);" +
-                              "    el.setAttribute('data-listener-attached', 'true');" +
+                              "  function markEdited() { this.setAttribute('data-user-modified', 'true'); }" +
+                              "  function attach(el) {" +
+                              "    if (!el || el.getAttribute('data-bound')) return;" +
+                              "    el.addEventListener('input', markEdited);" +
+                              "    el.addEventListener('change', markEdited);" +
+                              "    el.addEventListener('keydown', markEdited);" +
+                              "    el.setAttribute('data-bound', 'true');" +
                               "  }" +
                               "  function trigger(el) {" +
                               "    if (!el) return;" +
@@ -256,31 +251,28 @@ jobs:
                               "  }" +
                               "  function fill(el, val) {" +
                               "    if (!el) return;" +
-                              "    attachListener(el);" +
-                              "    if (el.getAttribute('data-user-edited') === 'true') return;" +
+                              "    attach(el);" +
+                              "    if (el.getAttribute('data-user-modified') === 'true') return;" +
                               "    if (el.value === val) return;" +
                               "    el.value = val;" +
                               "    trigger(el);" +
                               "  }" +
-                              "  function selectText(selectEl, text) {" +
-                              "    if (!selectEl) return;" +
-                              "    attachListener(selectEl);" +
-                              "    if (selectEl.getAttribute('data-user-edited') === 'true') return;" +
-                              "    for (var i = 0; i < selectEl.options.length; i++) {" +
-                              "      if (selectEl.options[i].text.indexOf(text) !== -1) {" +
-                              "        if (selectEl.selectedIndex !== i) {" +
-                              "          selectEl.selectedIndex = i;" +
-                              "          trigger(selectEl);" +
-                              "        }" +
+                              "  function selectText(sel, text) {" +
+                              "    if (!sel) return;" +
+                              "    attach(sel);" +
+                              "    if (sel.getAttribute('data-user-modified') === 'true') return;" +
+                              "    for (var i = 0; i < sel.options.length; i++) {" +
+                              "      if (sel.options[i].text.indexOf(text) !== -1) {" +
+                              "        if (sel.selectedIndex !== i) { sel.selectedIndex = i; trigger(sel); }" +
                               "        break;" +
                               "      }" +
                               "    }" +
                               "  }" +
 
                               "  setInterval(function() {" +
-                              // 1. تفاصيل الهوية: تثبيت نوع الجواز عادي
+                              // 1. نوع الجواز: عادي
                               "    document.querySelectorAll('input, select').forEach(function(el) {" +
-                              "      attachListener(el);" +
+                              "      attach(el);" +
                               "      var ph = el.getAttribute('placeholder') || '';" +
                               "      var label = (el.closest('.form-group, .v-input, div') || {}).innerText || '';" +
                               "      if (label.indexOf('نوع الجواز') !== -1 || ph.indexOf('نوع الجواز') !== -1) {" +
@@ -289,12 +281,11 @@ jobs:
                               "      }" +
                               "    });" +
 
-                              // 2. المعلومات الشخصية: قاعدة الحالة الاجتماعية
+                              // 2. الحالة الاجتماعية بحسب سنة الميلاد
                               "    var birthYear = 0;" +
                               "    document.querySelectorAll('input').forEach(function(inp) {" +
-                              "      var ph = inp.getAttribute('placeholder') || '';" +
                               "      var label = (inp.closest('.form-group, .v-input, div') || {}).innerText || '';" +
-                              "      if (label.indexOf('تاريخ الميلاد') !== -1 || ph.indexOf('تاريخ الميلاد') !== -1) {" +
+                              "      if (label.indexOf('تاريخ الميلاد') !== -1) {" +
                               "        var val = inp.value || '';" +
                               "        var m = val.match(/(19\\d\\d|20\\d\\d)/);" +
                               "        if (m) birthYear = parseInt(m[1]);" +
@@ -310,9 +301,9 @@ jobs:
                               "      });" +
                               "    }" +
 
-                              // 3. بيانات التواصل: البريد والجوال ورمز الدولة
+                              // 3. التواصل: البريد ورقم الجوال ورمز الدولة
                               "    document.querySelectorAll('input').forEach(function(input) {" +
-                              "      attachListener(input);" +
+                              "      attach(input);" +
                               "      var ph = input.getAttribute('placeholder') || '';" +
                               "      var aria = input.getAttribute('aria-label') || '';" +
                               "      if (ph.indexOf('البريد') !== -1 || aria.indexOf('البريد') !== -1) {" +
@@ -387,8 +378,8 @@ jobs:
                   applicationId "com.alrwishan.masarnusuk"
                   minSdk 24
                   targetSdk 34
-                  versionCode 7
-                  versionName "1.6"
+                  versionCode 8
+                  versionName "1.7"
               }
               buildTypes {
                   release {
@@ -406,4 +397,28 @@ jobs:
 
           cat << 'EOF' > settings.gradle
           pluginManagement {
-              repos
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "nusuk-app"
+          include ':app'
+          EOF
+
+      - name: Build with Gradle Wrapper
+        run: |
+          gradle wrapper
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/
