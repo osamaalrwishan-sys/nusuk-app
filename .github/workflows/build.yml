@@ -18,12 +18,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: "8.5"
-
-      - name: Setup Project
+      - name: Create Android Project Files
         run: |
           mkdir -p app/src/main/java/com/alrwishan/masarnusuk
           mkdir -p app/src/main/res/drawable
@@ -65,8 +60,8 @@ jobs:
                   applicationId "com.alrwishan.masarnusuk"
                   minSdk 24
                   targetSdk 34
-                  versionCode 18
-                  versionName "4.0"
+                  versionCode 19
+                  versionName "4.1"
               }
               buildTypes {
                   release {
@@ -99,7 +94,7 @@ jobs:
                   android:allowBackup="true"
                   android:icon="@drawable/ic_nusuk"
                   android:roundIcon="@drawable/ic_nusuk"
-                  android:label="مسار نسك الاحترافي"
+                  android:label="مسار نسك"
                   android:hardwareAccelerated="true"
                   android:theme="@android:style/Theme.NoTitleBar"
                   android:usesCleartextTraffic="true">
@@ -156,15 +151,12 @@ jobs:
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
-
-                  // إبقاء الشاشة حية لتفادي إغلاق الجلسة عند عدم اللمس
                   getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
                   RelativeLayout root = new RelativeLayout(this);
                   root.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
                   root.setBackgroundColor(Color.parseColor("#12171F"));
 
-                  // شريط تقدم أنيق جداً ونحيف
                   progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
                   RelativeLayout.LayoutParams progressParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 8);
                   progressParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
@@ -172,7 +164,6 @@ jobs:
                   progressBar.setProgressDrawable(createProgressDrawable());
                   progressBar.setVisibility(View.GONE);
 
-                  // شريط تحكم عائم زجاجي فائق الأناقة (Floating Glass Bar)
                   LinearLayout bar = new LinearLayout(this);
                   bar.setId(View.generateViewId());
                   bar.setOrientation(LinearLayout.HORIZONTAL);
@@ -181,7 +172,7 @@ jobs:
 
                   GradientDrawable barBg = new GradientDrawable();
                   barBg.setShape(GradientDrawable.RECTANGLE);
-                  barBg.setColor(Color.parseColor("#E6221A15")); // بني نسك داكن فخم مع شفافية زجاجية
+                  barBg.setColor(Color.parseColor("#E6221A15"));
                   barBg.setCornerRadius(30);
                   barBg.setStroke(2, Color.parseColor("#4D9E7D47"));
                   bar.setBackground(barBg);
@@ -198,7 +189,6 @@ jobs:
                   bar.addView(btnToggle);
                   bar.addView(btnRefresh);
 
-                  // إعداد المتصفح فائق السرعة
                   webView = new WebView(this);
                   webView.setBackgroundColor(Color.parseColor("#FFFFFF"));
                   RelativeLayout.LayoutParams webParams = new RelativeLayout.LayoutParams(
@@ -230,11 +220,9 @@ jobs:
               }
 
               private GradientDrawable createProgressDrawable() {
-                  GradientDrawable gd = new GradientDrawable(
+                  return new GradientDrawable(
                           GradientDrawable.Orientation.LEFT_RIGHT,
                           new int[]{Color.parseColor("#BFA067"), Color.parseColor("#876B41")});
-                  gd.setCornerRadius(0);
-                  return gd;
               }
 
               private Button createLuxuryBtn(String title) {
@@ -264,13 +252,10 @@ jobs:
                   s.setDatabaseEnabled(true);
                   s.setAllowFileAccess(true);
                   s.setAllowContentAccess(true);
-
-                  // تسريع التصفح وحفظ الذاكرة ليعمل بقوة على أضعف شبكة
                   s.setCacheMode(WebSettings.LOAD_DEFAULT);
                   s.setRenderPriority(WebSettings.RenderPriority.HIGH);
                   s.setEnableSmoothTransition(true);
 
-                  // خيارات التكبير
                   s.setSupportZoom(true);
                   s.setBuiltInZoomControls(true);
                   s.setDisplayZoomControls(false);
@@ -321,13 +306,11 @@ jobs:
                               webView.evaluateJavascript(forceDesktopJs, null);
                           }
 
-                          // محرك الحفاظ على الجلسة الحية والأتمتة الذكية
                           String script = 
                               "(function() {" +
                               "  if (window.__nusukEngineLoaded) return;" +
                               "  window.__nusukEngineLoaded = true;" +
 
-                              // 1. نبض مستمر يمنع انتهاء الجلسة والخروج التلقائي
                               "  setInterval(function() {" +
                               "    try {" +
                               "      window.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 200, clientY: 200 }));" +
@@ -337,7 +320,6 @@ jobs:
                               "    } catch (e) {}" +
                               "  }, 8000);" +
 
-                              // 2. حماية التعديل اليدوي
                               "  function markEdited() { this.setAttribute('data-user-modified', 'true'); }" +
                               "  function attach(el) {" +
                               "    if (!el || el.getAttribute('data-bound')) return;" +
@@ -346,7 +328,9 @@ jobs:
                               "  }" +
                               "  function trigger(el) {" +
                               "    if (!el) return;" +
-                              "    el.dispatchEvent(new Event('input', {bubbles: true})); el.dispatchEvent(new Event('change', {bubbles: true})); el.dispatchEvent(new Event('blur', {bubbles: true}));" +
+                              "    el.dispatchEvent(new Event('input', {bubbles: true}));" +
+                              "    el.dispatchEvent(new Event('change', {bubbles: true}));" +
+                              "    el.dispatchEvent(new Event('blur', {bubbles: true}));" +
                               "  }" +
                               "  function fill(el, val) {" +
                               "    if (!el) return; attach(el); if (el.getAttribute('data-user-modified') === 'true' || el.value === val) return;" +
@@ -361,7 +345,6 @@ jobs:
                               "    }" +
                               "  }" +
 
-                              // 3. التعبئة التلقائية الذكية
                               "  setInterval(function() {" +
                               "    document.querySelectorAll('input, select').forEach(function(el) {" +
                               "      attach(el);" +
@@ -391,4 +374,67 @@ jobs:
                               "      var ph = input.getAttribute('placeholder') || '';" +
                               "      if (ph.indexOf('البريد') !== -1) fill(input, 'osamaalrwishan@gmail.com');" +
                               "      if (ph.indexOf('الجوال') !== -1 || ph.indexOf('الهاتف') !== -1) fill(input, '775001721');" +
-                              "      if (input.value === '966' || input.value === '+966'
+                              "      if (input.value === '966' || input.value === '+966') fill(input, '967');" +
+                              "    });" +
+                              "    document.querySelectorAll('select').forEach(function(sel) {" +
+                              "      var label = (sel.closest('div') || {}).innerText || '';" +
+                              "      if (label.indexOf('966') !== -1 || label.indexOf('رمز الدولة') !== -1) selectText(sel, '967');" +
+                              "    });" +
+                              "  }, 1200);" +
+                              "})();";
+
+                          webView.evaluateJavascript(script, null);
+                      }
+                  });
+              }
+
+              @Override
+              protected void onResume() {
+                  super.onResume();
+                  er.getInstance().flush();
+              }
+
+              @Override
+              protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+                  if (requestCode == FILECHOOSER_RESULTCODE) {
+                      if (filePathCallback == null) return;
+                      filePathCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
+                      filePathCallback = null;
+                  } else super.onActivityResult(requestCode, resultCode, data);
+              }
+
+              private void applyMode() {
+                  WebSettings s = webView.getSettings();
+                  if (isDesktop) {
+                      s.setUserAgentString(DESKTOP_UA);
+                      s.setUseWideViewPort(true);
+                      s.setLoadWithOverviewMode(true);
+                      webView.setInitialScale(75);
+                  } else {
+                      s.setUserAgentString(MOBILE_UA);
+                      s.setUseWideViewPort(false);
+                      s.setLoadWithOverviewMode(false);
+                      webView.setInitialScale(0);
+                  }
+              }
+
+              @Override
+              public void onBackPressed() {
+                  if (webView.canGoBack()) webView.goBack();
+                  else super.onBackPressed();
+              }
+          }
+          EOF
+
+      - name: Build APK with Gradle Action
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: "8.5"
+          arguments: assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nusuk-App-Pro
+          path: app/build/outputs/apk/debug/*.apk
+          
