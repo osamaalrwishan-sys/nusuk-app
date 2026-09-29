@@ -65,8 +65,8 @@ jobs:
                   applicationId "com.alrwishan.masarnusuk"
                   minSdk 24
                   targetSdk 34
-                  versionCode 17
-                  versionName "3.1"
+                  versionCode 18
+                  versionName "4.0"
               }
               buildTypes {
                   release {
@@ -94,11 +94,13 @@ jobs:
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
               <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
               <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+              <uses-permission android:name="android.permission.WAKE_LOCK" />
               <application
                   android:allowBackup="true"
                   android:icon="@drawable/ic_nusuk"
                   android:roundIcon="@drawable/ic_nusuk"
-                  android:label="مسار نسك"
+                  android:label="مسار نسك الاحترافي"
+                  android:hardwareAccelerated="true"
                   android:theme="@android:style/Theme.NoTitleBar"
                   android:usesCleartextTraffic="true">
                   <activity
@@ -121,12 +123,14 @@ jobs:
           import android.app.Activity;
           import android.content.Intent;
           import android.graphics.Color;
+          import android.graphics.Typeface;
           import android.graphics.drawable.GradientDrawable;
           import android.net.Uri;
           import android.os.Bundle;
           import android.view.Gravity;
           import android.view.View;
           import android.view.ViewGroup;
+          import android.view.WindowManager;
           import android.webkit.CookieManager;
           import android.webkit.ValueCallback;
           import android.webkit.WebChromeClient;
@@ -135,10 +139,12 @@ jobs:
           import android.webkit.WebViewClient;
           import android.widget.Button;
           import android.widget.LinearLayout;
+          import android.widget.ProgressBar;
           import android.widget.RelativeLayout;
 
           public class MainActivity extends Activity {
               private WebView webView;
+              private ProgressBar progressBar;
               private boolean isDesktop = true;
               private ValueCallback<Uri[]> filePathCallback;
               private final static int FILECHOOSER_RESULTCODE = 1001;
@@ -150,34 +156,59 @@ jobs:
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
+
+                  // إبقاء الشاشة حية لتفادي إغلاق الجلسة عند عدم اللمس
+                  getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
                   RelativeLayout root = new RelativeLayout(this);
                   root.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-                  root.setBackgroundColor(Color.parseColor("#F9F7F2"));
+                  root.setBackgroundColor(Color.parseColor("#12171F"));
 
+                  // شريط تقدم أنيق جداً ونحيف
+                  progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+                  RelativeLayout.LayoutParams progressParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 8);
+                  progressParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+                  progressBar.setLayoutParams(progressParams);
+                  progressBar.setProgressDrawable(createProgressDrawable());
+                  progressBar.setVisibility(View.GONE);
+
+                  // شريط تحكم عائم زجاجي فائق الأناقة (Floating Glass Bar)
                   LinearLayout bar = new LinearLayout(this);
                   bar.setId(View.generateViewId());
                   bar.setOrientation(LinearLayout.HORIZONTAL);
-                  bar.setBackgroundColor(Color.parseColor("#876B41"));
                   bar.setGravity(Gravity.CENTER_VERTICAL);
-                  bar.setPadding(14, 10, 14, 10);
+                  bar.setPadding(20, 12, 20, 12);
 
-                  RelativeLayout.LayoutParams barParams = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+                  GradientDrawable barBg = new GradientDrawable();
+                  barBg.setShape(GradientDrawable.RECTANGLE);
+                  barBg.setColor(Color.parseColor("#E6221A15")); // بني نسك داكن فخم مع شفافية زجاجية
+                  barBg.setCornerRadius(30);
+                  barBg.setStroke(2, Color.parseColor("#4D9E7D47"));
+                  bar.setBackground(barBg);
+                  bar.setElevation(15);
+
+                  RelativeLayout.LayoutParams barParams = new RelativeLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                   barParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+                  barParams.setMargins(25, 20, 25, 12);
                   bar.setLayoutParams(barParams);
 
-                  Button btnToggle = createNusukBtn("💻 وضع الكمبيوتر");
-                  Button btnRefresh = createNusukBtn("🔄 تحديث");
+                  Button btnToggle = createLuxuryBtn("💻 وضع الكمبيوتر");
+                  Button btnRefresh = createLuxuryBtn("⚡ تحديث الجلسة");
                   bar.addView(btnToggle);
                   bar.addView(btnRefresh);
 
+                  // إعداد المتصفح فائق السرعة
                   webView = new WebView(this);
-                  webView.setBackgroundColor(Color.parseColor("#F9F7F2"));
-                  RelativeLayout.LayoutParams webParams = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT);
+                  webView.setBackgroundColor(Color.parseColor("#FFFFFF"));
+                  RelativeLayout.LayoutParams webParams = new RelativeLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
                   webParams.addRule(RelativeLayout.BELOW, bar.getId());
                   webView.setLayoutParams(webParams);
 
-                  root.addView(bar);
                   root.addView(webView);
+                  root.addView(bar);
+                  root.addView(progressBar);
                   setContentView(root);
 
                   setupSettings();
@@ -189,23 +220,39 @@ jobs:
                       webView.reload();
                   });
 
-                  btnRefresh.setOnClickListener(v -> webView.reload());
+                  btnRefresh.setOnClickListener(v -> {
+                      CookieManager.getInstance().flush();
+                      webView.reload();
+                  });
+
                   applyMode();
                   webView.loadUrl("https://masar.nusuk.sa");
               }
 
-              private Button createNusukBtn(String title) {
+              private GradientDrawable createProgressDrawable() {
+                  GradientDrawable gd = new GradientDrawable(
+                          GradientDrawable.Orientation.LEFT_RIGHT,
+                          new int[]{Color.parseColor("#BFA067"), Color.parseColor("#876B41")});
+                  gd.setCornerRadius(0);
+                  return gd;
+              }
+
+              private Button createLuxuryBtn(String title) {
                   Button b = new Button(this);
                   b.setText(title);
-                  b.setTextColor(Color.parseColor("#FFFFFF"));
+                  b.setTextColor(Color.parseColor("#F9F7F2"));
                   b.setTextSize(13);
+                  b.setTypeface(Typeface.DEFAULT_BOLD);
+
                   GradientDrawable shape = new GradientDrawable();
                   shape.setShape(GradientDrawable.RECTANGLE);
-                  shape.setColor(Color.parseColor("#6D5431"));
-                  shape.setCornerRadius(10);
+                  shape.setColor(Color.parseColor("#382A1B"));
+                  shape.setCornerRadius(20);
+                  shape.setStroke(2, Color.parseColor("#9E7D47"));
                   b.setBackground(shape);
-                  LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
-                  lp.setMargins(6, 0, 6, 0);
+
+                  LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, 110, 1.0f);
+                  lp.setMargins(10, 0, 10, 0);
                   b.setLayoutParams(lp);
                   return b;
               }
@@ -217,6 +264,13 @@ jobs:
                   s.setDatabaseEnabled(true);
                   s.setAllowFileAccess(true);
                   s.setAllowContentAccess(true);
+
+                  // تسريع التصفح وحفظ الذاكرة ليعمل بقوة على أضعف شبكة
+                  s.setCacheMode(WebSettings.LOAD_DEFAULT);
+                  s.setRenderPriority(WebSettings.RenderPriority.HIGH);
+                  s.setEnableSmoothTransition(true);
+
+                  // خيارات التكبير
                   s.setSupportZoom(true);
                   s.setBuiltInZoomControls(true);
                   s.setDisplayZoomControls(false);
@@ -226,6 +280,16 @@ jobs:
                   cm.setAcceptThirdPartyCookies(webView, true);
 
                   webView.setWebChromeClient(new WebChromeClient() {
+                      @Override
+                      public void onProgressChanged(WebView view, int newProgress) {
+                          if (newProgress < 100) {
+                              progressBar.setVisibility(View.VISIBLE);
+                              progressBar.setProgress(newProgress);
+                          } else {
+                              progressBar.setVisibility(View.GONE);
+                          }
+                      }
+
                       @Override
                       public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
                           if (MainActivity.this.filePathCallback != null) MainActivity.this.filePathCallback.onReceiveValue(null);
@@ -246,6 +310,7 @@ jobs:
                       public void onPageFinished(WebView view, String url) {
                           super.onPageFinished(view, url);
                           CookieManager.getInstance().flush();
+
                           if (isDesktop) {
                               String forceDesktopJs = 
                                   "var meta = document.querySelector('meta[name=viewport]');" +
@@ -256,18 +321,23 @@ jobs:
                               webView.evaluateJavascript(forceDesktopJs, null);
                           }
 
+                          // محرك الحفاظ على الجلسة الحية والأتمتة الذكية
                           String script = 
                               "(function() {" +
-                              "  if (window.__keepAliveInit) return;" +
-                              "  window.__keepAliveInit = true;" +
+                              "  if (window.__nusukEngineLoaded) return;" +
+                              "  window.__nusukEngineLoaded = true;" +
+
+                              // 1. نبض مستمر يمنع انتهاء الجلسة والخروج التلقائي
                               "  setInterval(function() {" +
                               "    try {" +
-                              "      window.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 100, clientY: 100 }));" +
+                              "      window.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 200, clientY: 200 }));" +
                               "      window.dispatchEvent(new Event('scroll', { bubbles: true }));" +
-                              "      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift' }));" +
                               "      document.dispatchEvent(new Event('visibilitychange'));" +
+                              "      if (window.fetch) { fetch(window.location.href, { method: 'HEAD', cache: 'no-store' }).catch(function(){}); }" +
                               "    } catch (e) {}" +
-                              "  }, 15000);" +
+                              "  }, 8000);" +
+
+                              // 2. حماية التعديل اليدوي
                               "  function markEdited() { this.setAttribute('data-user-modified', 'true'); }" +
                               "  function attach(el) {" +
                               "    if (!el || el.getAttribute('data-bound')) return;" +
@@ -290,6 +360,8 @@ jobs:
                               "      }" +
                               "    }" +
                               "  }" +
+
+                              // 3. التعبئة التلقائية الذكية
                               "  setInterval(function() {" +
                               "    document.querySelectorAll('input, select').forEach(function(el) {" +
                               "      attach(el);" +
@@ -319,57 +391,4 @@ jobs:
                               "      var ph = input.getAttribute('placeholder') || '';" +
                               "      if (ph.indexOf('البريد') !== -1) fill(input, 'osamaalrwishan@gmail.com');" +
                               "      if (ph.indexOf('الجوال') !== -1 || ph.indexOf('الهاتف') !== -1) fill(input, '775001721');" +
-                              "      if (input.value === '966' || input.value === '+966') fill(input, '967');" +
-                              "    });" +
-                              "    document.querySelectorAll('select').forEach(function(sel) {" +
-                              "      var label = (sel.closest('div') || {}).innerText || '';" +
-                              "      if (label.indexOf('966') !== -1 || label.indexOf('رمز الدولة') !== -1) selectText(sel, '967');" +
-                              "    });" +
-                              "  }, 1200);" +
-                              "})();";
-                          webView.evaluateJavascript(script, null);
-                      }
-                  });
-              }
-
-              @Override
-              protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-                  if (requestCode == FILECHOOSER_RESULTCODE) {
-                      if (filePathCallback == null) return;
-                      filePathCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
-                      filePathCallback = null;
-                  } else super.onActivityResult(requestCode, resultCode, data);
-              }
-
-              private void applyMode() {
-                  WebSettings s = webView.getSettings();
-                  if (isDesktop) {
-                      s.setUserAgentString(DESKTOP_UA);
-                      s.setUseWideViewPort(true);
-                      s.setLoadWithOverviewMode(true);
-                      webView.setInitialScale(75);
-                  } else {
-                      s.setUserAgentString(MOBILE_UA);
-                      s.setUseWideViewPort(false);
-                      s.setLoadWithOverviewMode(false);
-                      webView.setInitialScale(0);
-                  }
-              }
-
-              @Override
-              public void onBackPressed() {
-                  if (webView.canGoBack()) webView.goBack();
-                  else super.onBackPressed();
-              }
-          }
-          EOF
-
-      - name: Build APK
-        run: gradle assembleDebug
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Nusuk-App-Live
-          path: app/build/outputs/apk/debug/*.apk
-          
+                              "      if (input.value === '966' || input.value === '+966'
